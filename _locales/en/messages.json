@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "TabVideoGrab"
+  },
+  "extDescription": {
+    "message": "Detects video on web pages (MP4, WebM, HLS, DASH, YouTube), shows available resolutions with HDR info, and downloads the chosen version with your audio track and subtitles."
+  }
+}

@@ -1,4 +1,4 @@
-# Usuwa rejestracje programu pomocniczego TabVideoGrab z Firefoksa.
+# Removes the TabVideoGrab native helper registration from Firefox.
 $key = 'HKCU:\Software\Mozilla\NativeMessagingHosts\tabvideograb'
-if (Test-Path $key) { Remove-Item -Path $key -Recurse -Force; Write-Host "Usunieto $key" }
-else { Write-Host 'Program pomocniczy nie byl zarejestrowany.' }
+if (Test-Path $key) { Remove-Item -Path $key -Recurse -Force; Write-Host "Removed $key" }
+else { Write-Host 'The native helper was not registered.' }

@@ -5,8 +5,8 @@
 A Firefox add-on that detects video in the current tab, lists the available resolutions with an **HDR10 / HLG / Dolby Vision / SDR** badge, and downloads the version you pick, together with the audio track and subtitles you choose.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="480" alt="TabVideoGrab popup">
-  <br><sub>The add-on popup (sample data; the interface is currently in Polish)</sub>
+  <img src="docs/screenshot.png" width="510" alt="TabVideoGrab popup">
+  <br><sub>The add-on popup (sample data)</sub>
 </p>
 
 ## Features
@@ -38,6 +38,7 @@ A Firefox add-on that detects video in the current tab, lists the available reso
   Segments are written to disk (OPFS), so large videos don't fill up memory. When video and audio are saved as separate files, the add-on gives you a ready `ffmpeg … -c copy` command to merge them.
 - **M3U lists** (IPTV, radio): the add-on lists the entries with a search box, and the **Analyze** button inspects the selected entry (versions, HDR, download).
 - **YouTube** via [yt-dlp](https://github.com/yt-dlp/yt-dlp) – see below.
+- **English and Polish interface**, chosen automatically from the browser language.
 
 ## Installation
 
@@ -61,7 +62,7 @@ Release Firefox only installs signed add-ons. You have two options:
   Drag the `.xpi` from the `web-ext-artifacts` folder into Firefox.
 - **Firefox Developer Edition / Nightly / ESR:** set `xpinstall.signatures.required` to `false` in `about:config`, pack the add-on and drag the `.xpi` into the window:
   ```powershell
-  Compress-Archive -Path manifest.json,background.js,content.js,lib,popup,icons -DestinationPath TabVideoGrab.zip -Force; Move-Item TabVideoGrab.zip TabVideoGrab.xpi -Force
+  Compress-Archive -Path manifest.json,background.js,content.js,lib,popup,icons,_locales -DestinationPath TabVideoGrab.zip -Force; Move-Item TabVideoGrab.zip TabVideoGrab.xpi -Force
   ```
 
 ## YouTube
@@ -126,7 +127,6 @@ Run it again after moving the folder. To uninstall: `.\host\uninstall.ps1`.
 - **Live streams:** for HLS, only the part available at that moment is downloaded. Endless streams (radio) keep downloading until you cancel.
 - **Merging video and audio:** for HLS/DASH the add-on doesn't merge them; it gives you the ffmpeg command. On YouTube, yt-dlp does it.
 - **Native helper:** the install script is Windows-only for now.
-- **Interface language:** the popup is currently in Polish.
 
 ## Project structure
 
@@ -139,6 +139,7 @@ Run it again after moving the folder. To uninstall: `.\host\uninstall.ps1`.
 | `lib/hdr.js` | HDR10 / HLG / Dolby Vision / SDR classification |
 | `lib/youtube.js` | YouTube formats, audio tracks and subtitles; yt-dlp commands |
 | `lib/sink.js` | segment storage (OPFS or memory) |
+| `lib/i18n.js`, `_locales/` | English and Polish translations |
 | `popup/` | the add-on popup |
 | `host/` | native helper (Python, native messaging) and install scripts |
 

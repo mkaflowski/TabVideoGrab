@@ -12,7 +12,7 @@ const hostReferer = new Map(); // host -> referer (dla zapytań wysyłanych prze
 let seq = 0;
 const uid = (p) => p + (++seq).toString(36) + Math.random().toString(36).slice(2, 6);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const abortError = () => new DOMException('Anulowano', 'AbortError');
+const abortError = () => new DOMException('Canceled', 'AbortError');
 
 function tabState(tabId) {
   let t = tabs.get(tabId);
@@ -290,7 +290,7 @@ function hlsAudioTracks(list) {
       label:
         (a.name || a.language || 'Audio') +
         (a.language && a.name && !a.name.includes(a.language) ? ` (${a.language})` : '') +
-        (a.channels ? ` · ${a.channels} kan.` : ''),
+        (a.channels ? ' · ' + VG.t('channels', { n: a.channels }) : ''),
       isDefault: false,
     };
     if (a.isDefault) tr.isDefault = true;
@@ -305,10 +305,10 @@ async function analyzeHls(item, t) {
   if (!VG.hls.isHls(text)) {
     // Zwykła lista M3U (kanały IPTV, radio) – nie sklejamy jej, tylko pokazujemy pozycje do analizy
     const entries = VG.hls.parsePlain(text, item.url);
-    if (!entries.length) throw new Error('To nie jest playlista HLS ani lista M3U');
+    if (!entries.length) throw new Error(VG.t('errNotPlaylist'));
     item.kind = 'm3u';
     item.entries = entries.map((e, i) => ({ id: 'e' + i, ...e, added: false }));
-    item.notes.push(`Lista M3U (${entries.length} poz.) – wybierz pozycję i kliknij „Analizuj”, żeby zobaczyć jakości i pobrać.`);
+    item.notes.push(VG.t('m3uList', { n: entries.length }));
     return;
   }
 
@@ -321,7 +321,7 @@ async function analyzeHls(item, t) {
     item.audioTracks = hlsAudioTracks(item._hls.audio);
     item.subTracks = m.subs.map((x, i) => ({
       id: 'h' + i,
-      label: (x.name || x.language || 'Napisy ' + (i + 1)) + (x.language && x.name && !x.name.includes(x.language) ? ` (${x.language})` : ''),
+      label: (x.name || x.language || VG.t('subsN', { n: i + 1 })) + (x.language && x.name && !x.name.includes(x.language) ? ` (${x.language})` : ''),
       _url: x.url,
       _lang: x.language,
     }));
@@ -381,9 +381,9 @@ async function analyzeHls(item, t) {
       } catch (e) {}
     }
   } else {
-    if (t.children.has(item.url)) throw new Error('Wariant innej playlisty');
+    if (t.children.has(item.url)) throw new Error(VG.t('errVariant'));
     const mp = VG.hls.parseMedia(text, item.url);
-    if (!mp.segments.length) throw new Error('Pusta playlista');
+    if (!mp.segments.length) throw new Error(VG.t('errEmptyPlaylist'));
     item.duration = mp.totalDuration;
     item.live = !mp.endList;
     item.drm = mp.drm;
@@ -392,8 +392,8 @@ async function analyzeHls(item, t) {
     if (mp.segments[0].map) await probeInit(opt, mp.segments[0].map, item);
     item.options = [opt];
   }
-  if (item.drm) item.notes.push('Zabezpieczone DRM – pobranie niemożliwe.');
-  if (item.live) item.notes.push('Transmisja na żywo – zostanie pobrany tylko bieżący fragment.');
+  if (item.drm) item.notes.push(VG.t('drmBlocked'));
+  if (item.live) item.notes.push(VG.t('liveHls'));
 }
 
 // Odczyt segmentu inicjalizującego fMP4 (rozdzielczość, HDR)
@@ -443,7 +443,7 @@ async function analyzeDash(item, t) {
           label:
             ([a.label, a.lang].filter(Boolean).join(' · ') || 'Audio') +
             (a.role && a.role !== 'main' ? ` (${a.role})` : '') +
-            (a.channels ? ` · ${a.channels} kan.` : ''),
+            (a.channels ? ' · ' + VG.t('channels', { n: a.channels }) : ''),
           isDefault: a === audios[0],
         }))
       : [];
@@ -451,7 +451,7 @@ async function analyzeDash(item, t) {
     .filter((x) => x.seg && !x.drm && (x.seg.single || /^text\//.test(x.mime)))
     .map((x, i) => ({
       id: 'd' + i,
-      label: ([x.label, x.lang].filter(Boolean).join(' · ') || 'Napisy ' + (i + 1)) + (x.role && x.role !== 'subtitle' ? ` (${x.role})` : ''),
+      label: ([x.label, x.lang].filter(Boolean).join(' · ') || VG.t('subsN', { n: i + 1 })) + (x.role && x.role !== 'subtitle' ? ` (${x.role})` : ''),
       _rep: x,
       _lang: x.lang,
     }));
@@ -488,11 +488,11 @@ async function analyzeDash(item, t) {
     if (r.seg && !r.seg.single) addSegDir(t, (r.seg.segments[0] || {}).url);
   }
   item.drm = item.options.length > 0 && item.options.every((o) => o.drm);
-  if (item.drm) item.notes.push('Zabezpieczone DRM – pobranie niemożliwe.');
-  else if (item.options.some((o) => o.drm)) item.notes.push('Część wersji jest zabezpieczona DRM.');
-  if (item.live) item.notes.push('Transmisja na żywo (dynamic MPD) – pobieranie może być niepełne.');
-  if (d.multiPeriod) item.notes.push('Manifest ma kilka okresów – pobierany jest tylko pierwszy.');
-  if (d.videos.length && bestAudio) item.notes.push('Obraz i dźwięk zostaną zapisane jako osobne pliki.');
+  if (item.drm) item.notes.push(VG.t('drmBlocked'));
+  else if (item.options.some((o) => o.drm)) item.notes.push(VG.t('someDrm'));
+  if (item.live) item.notes.push(VG.t('liveDash'));
+  if (d.multiPeriod) item.notes.push(VG.t('multiPeriod'));
+  if (d.videos.length && bestAudio) item.notes.push(VG.t('separateAV'));
 }
 
 async function analyzeFile(item) {
@@ -500,7 +500,7 @@ async function analyzeFile(item) {
   const opt = { id: uid('o'), label: '?', width: 0, height: 0, codecs: '', hdr: VG.classifyHdr({}), size: item.size };
   item.options = [opt];
   item.container = ['webm', 'mkv', 'mov', 'mp4', 'm4v', 'ogv'].includes(ext) ? ext : item.mime.includes('webm') ? 'webm' : 'mp4';
-  if (item.live) item.notes.push('Strumień bez końca (na żywo) – pobieranie trwa, dopóki go nie anulujesz.');
+  if (item.live) item.notes.push(VG.t('liveEndless'));
   const audio = /^audio\//.test(item.mime) || ['mp3', 'aac', 'ogg', 'opus', 'flac', 'm4a'].includes(ext);
   if (audio) {
     // radio / plik audio: bez sondowania nagłówka (strumień na żywo by się nie skończył)
@@ -514,7 +514,7 @@ async function analyzeFile(item) {
   try {
     p = await VG.probeFile(item.url, (u, s, e) => fetchRange(u, s, e, item.referer));
   } catch (e) {
-    item.notes.push('Nie udało się odczytać nagłówka pliku (' + e.message + ').');
+    item.notes.push(VG.t('headerFail', { err: e.message }));
   }
   if (!p) return;
   if (p.total) opt.size = item.size = p.total;
@@ -529,7 +529,7 @@ async function analyzeFile(item) {
     opt.hdr = VG.classifyHdr({ codecs: v.format, transfer: v.transfer, bitDepth: v.bitDepth, dolby: v.dolby, hdrMeta: v.hdrMeta, primaries: v.primaries, matrix: v.matrix });
     if (v.encrypted) {
       opt.drm = item.drm = true;
-      item.notes.push('Plik zaszyfrowany (CENC) – po pobraniu nie da się go odtworzyć.');
+      item.notes.push(VG.t('cencFile'));
     }
   }
 }
@@ -587,14 +587,14 @@ function updateProgress(job, counter) {
 async function waitDownload(id, job, trackProgress) {
   for (;;) {
     const [d] = await browser.downloads.search({ id });
-    if (!d) throw new Error('Pobieranie zniknęło z listy');
+    if (!d) throw new Error(VG.t('errDlGone'));
     if (trackProgress) {
       job.bytes = d.bytesReceived;
       job.progress = d.totalBytes > 0 ? d.bytesReceived / d.totalBytes : 0;
       updateProgress(job, { done: d.bytesReceived, total: d.totalBytes > 0 ? d.totalBytes : 0 });
     }
     if (d.state === 'complete') return d;
-    if (d.state === 'interrupted') throw new Error('Pobieranie przerwane: ' + (d.error || 'nieznany błąd'));
+    if (d.state === 'interrupted') throw new Error(VG.t('errDlInterrupted', { err: d.error || VG.t('unknownError') }));
     if (job.ctrl.signal.aborted) {
       await browser.downloads.cancel(id).catch(() => {});
       throw abortError();
@@ -624,7 +624,7 @@ async function browserDownload(url, filename, job, referer, trackProgress) {
 async function saveBlob(blob, filename, job) {
   const url = URL.createObjectURL(blob);
   try {
-    job.phase = 'Zapisywanie pliku';
+    job.phase = VG.t('phSaving');
     const id = await browser.downloads.download({ url, filename, saveAs: false, conflictAction: 'uniquify' });
     job.downloadIds.push(id);
     const d = await waitDownload(id, job, false);
@@ -641,7 +641,7 @@ async function decryptAes(data, key, cache, referer, signal) {
   if (!k) {
     k = (async () => {
       const raw = await fetchBytes(key.uri, null, referer, signal);
-      if (raw.length !== 16) throw new Error('Nieprawidłowy klucz AES-128');
+      if (raw.length !== 16) throw new Error(VG.t('errAesKey'));
       return crypto.subtle.importKey('raw', raw, { name: 'AES-CBC' }, false, ['decrypt']);
     })();
     cache.set(key.uri, k);
@@ -703,7 +703,7 @@ async function downloadParts(parts, sink, job, referer, counter) {
     failed = failed || e;
   });
   if (failed) throw failed;
-  if (writeIdx !== parts.length) throw new Error('Nie wszystkie segmenty zostały zapisane');
+  if (writeIdx !== parts.length) throw new Error(VG.t('errSegments'));
 }
 
 async function saveTrack(job, parts, filename, mime, referer, counter) {
@@ -769,7 +769,7 @@ function joinVtt(chunks) {
 }
 
 async function downloadSubtitle(job, item, option, sub) {
-  job.phase = 'Pobieranie napisów';
+  job.phase = VG.t('phSubs');
   const signal = job.ctrl.signal;
   let ext = 'vtt';
   let blob = null;
@@ -803,11 +803,11 @@ async function runHls(job, item, option) {
   const tracks = [];
   const load = async (url, audio) => {
     const media = VG.hls.parseMedia(await fetchText(url, item.referer, signal), url);
-    if (media.drm) throw new Error('Strumień zabezpieczony DRM – nie da się pobrać.');
-    if (!media.segments.length) throw new Error('Pusta playlista');
+    if (media.drm) throw new Error(VG.t('errDrmStream'));
+    if (!media.segments.length) throw new Error(VG.t('errEmptyPlaylist'));
     tracks.push({ audio, media, parts: hlsParts(media), ext: hlsExt(media, audio) });
   };
-  job.phase = 'Wczytywanie playlisty';
+  job.phase = VG.t('phPlaylist');
   // wybrana ścieżka dźwiękowa
   let audioUrl = option._hlsAudio;
   let videoUrl = option._hlsVideo;
@@ -824,7 +824,7 @@ async function runHls(job, item, option) {
   const counter = { done: 0, total: tracks.reduce((s, t) => s + t.parts.length, 0) };
   const multi = tracks.length > 1;
   for (const t of tracks) {
-    job.phase = multi ? (t.audio ? 'Pobieranie audio' : 'Pobieranie obrazu') : 'Pobieranie segmentów';
+    job.phase = multi ? (t.audio ? VG.t('phAudio') : VG.t('phVideo')) : VG.t('phSegments');
     const name = makeName(item, option, t.ext, multi && t.audio ? ' audio' : '');
     await saveTrack(job, t.parts, name, MIME[t.ext], item.referer, counter);
   }
@@ -841,8 +841,8 @@ async function runDash(job, item, option) {
   if (job.choice.audio && item._dashAudio && item._dashAudio.has(job.choice.audio)) audioRep = item._dashAudio.get(job.choice.audio);
   if (audioRep) tracks.push({ audio: true, rep: audioRep });
   for (const t of tracks) {
-    if (t.rep.drm) throw new Error('Strumień zabezpieczony DRM – nie da się pobrać.');
-    if (!t.rep.seg) throw new Error(t.rep.segErr || 'Nieobsługiwany format segmentów');
+    if (t.rep.drm) throw new Error(VG.t('errDrmStream'));
+    if (!t.rep.seg) throw new Error(t.rep.segErr || VG.t('errSegFormat'));
   }
   const multi = tracks.length > 1;
   const counter = {
@@ -853,7 +853,7 @@ async function runDash(job, item, option) {
     const webm = /webm/.test(t.rep.mime);
     const ext = webm ? 'webm' : t.audio ? 'm4a' : 'mp4';
     const name = makeName(item, option, ext, multi && t.audio ? ' audio' : '');
-    job.phase = multi ? (t.audio ? 'Pobieranie audio' : 'Pobieranie obrazu') : 'Pobieranie';
+    job.phase = multi ? (t.audio ? VG.t('phAudio') : VG.t('phVideo')) : VG.t('phDownloading');
     if (t.rep.seg.single) {
       await browserDownload(t.rep.seg.segments[0].url, name, job, item.referer, counter.total === 0 && !multi);
     } else {
@@ -866,7 +866,7 @@ async function runDash(job, item, option) {
 }
 
 async function runFile(job, item, option) {
-  job.phase = 'Pobieranie (menedżer pobierania Firefoksa)';
+  job.phase = VG.t('phBrowserDl');
   const ext = item.container || 'mp4';
   await browserDownload(item.url, makeName(item, option, ext), job, item.referer, true);
 }
@@ -897,10 +897,10 @@ function nativeConnect() {
     native.error = err;
     for (const w of native.waiters) w(false);
     native.waiters = [];
-    for (const cb of native.infoReq.values()) cb({ error: 'Program pomocniczy zakończył działanie' });
+    for (const cb of native.infoReq.values()) cb({ error: VG.t('errHelperExited') });
     native.infoReq.clear();
     for (const j of jobs.values()) {
-      if (j.native && j.status === 'running') j.native.reject(new Error('Program pomocniczy zakończył działanie ' + err));
+      if (j.native && j.status === 'running') j.native.reject(new Error(VG.t('errHelperExited') + ' ' + err));
     }
   });
   port.postMessage({ cmd: 'ping' });
@@ -948,20 +948,20 @@ function onNativeMessage(m) {
       const frac = m.total ? Math.min(1, m.downloaded / m.total) : 0;
       job.progress = Math.min(0.99, (Math.min(m.part, n.parts) - 1 + frac) / n.parts);
       job.speed = m.speed || 0;
-      job.phase = n.parts > 1 ? (m.part <= 1 ? 'Pobieranie obrazu' : 'Pobieranie dźwięku') : 'Pobieranie';
+      job.phase = n.parts > 1 ? (m.part <= 1 ? VG.t('phVideo') : VG.t('phAudio')) : VG.t('phDownloading');
       job.phase += ' (yt-dlp)';
       break;
     }
     case 'phase':
       if (m.phase === 'auth') {
         // film wymaga zalogowania – yt-dlp startuje ponownie z ciasteczkami Firefoksa
-        job.phase = 'Ponowna próba z logowaniem z Firefoksa';
+        job.phase = VG.t('phRetryLogin');
         Object.assign(n, { lastPart: 1, base: 0, lastDl: 0 });
         job.progress = 0;
         job.bytes = 0;
         const it = findItemByJob(job);
         if (it) it.needsCookies = true;
-      } else job.phase = 'Łączenie obrazu z dźwiękiem (ffmpeg)';
+      } else job.phase = VG.t('phMerge');
       job.speed = 0;
       break;
     case 'done':
@@ -970,12 +970,17 @@ function onNativeMessage(m) {
       n.resolve();
       break;
     case 'error':
-      n.reject(new Error(m.error || 'Błąd yt-dlp'));
+      n.reject(new Error(hostError(m) || VG.t('errYtdlp')));
       break;
     case 'canceled':
       n.reject(abortError());
       break;
   }
+}
+
+// Komunikat błędu z programu pomocniczego: znane kody tłumaczymy, resztę (np. tekst z yt-dlp) zostawiamy
+function hostError(m) {
+  return m && m.code ? VG.t('host_' + m.code) : m && m.error;
 }
 
 function findItemByJob(job) {
@@ -998,7 +1003,7 @@ function requestYtdlpInfo(item) {
       } catch (e) {
         item.ytdlpError = e.message;
       }
-    } else if (m && m.error) item.ytdlpError = m.error;
+    } else if (m && m.error) item.ytdlpError = hostError(m);
   });
   native.port.postMessage({ cmd: 'info', id: reqId, url: item.url });
 }
@@ -1013,17 +1018,15 @@ function applyYt(item, r, source) {
   item.subTracks = (r.subTracks || []).map((x) => ({ ...x, _lang: x.lang }));
   item.source = source;
   item.notes = [];
-  if (item.live) item.notes.push('Transmisja na żywo – yt-dlp pobierze ją od bieżącego momentu.');
+  if (item.live) item.notes.push(VG.t('liveYt'));
   if (r.preview) {
     item.notes.push(
-      'Strona odtwarza tylko zwiastun' +
-        (r.preview.seconds ? ` (${VG.formatDuration(r.preview.seconds)})` : '') +
-        ', a nie pełny film' +
-        (r.preview.reason ? ` – YouTube: „${r.preview.reason}”` : '') +
-        '. Pełna lista formatów przyjdzie z yt-dlp, jeśli Twoje konto w Firefoksie ma dostęp (np. Premium).'
+      VG.t('trailerNote', {
+        dur: r.preview.seconds ? ` (${VG.formatDuration(r.preview.seconds)})` : '',
+        reason: r.preview.reason ? ` – YouTube: “${r.preview.reason}”` : '',
+      })
     );
-  } else if (source === 'page' && !r.hasFormats)
-    item.notes.push('YouTube nie udostępnił listy formatów na stronie – dostępna jest opcja „Najlepsza”.');
+  } else if (source === 'page' && !r.hasFormats) item.notes.push(VG.t('noYtFormats'));
 }
 
 async function addYoutube(tabId, id, pr) {
@@ -1083,13 +1086,13 @@ function ytParams(item, option, choice) {
 
 function runYoutube(job, item, option) {
   if (native.state !== 'ok' || !native.port)
-    throw new Error('Program pomocniczy nie jest zainstalowany – użyj przycisku „⧉” (kopiuj komendę) albo zainstaluj pomocnika (README).');
-  if (!native.info || !native.info.ytdlp) throw new Error('Program pomocniczy nie znalazł yt-dlp. Zainstaluj: winget install yt-dlp.yt-dlp');
+    throw new Error(VG.t('errHelperMissing'));
+  if (!native.info || !native.info.ytdlp) throw new Error(VG.t('errNoYtdlp'));
   return new Promise((resolve, reject) => {
     const yt = ytParams(item, option, job.choice);
     const sel = yt.selector.split('/')[0];
     job.native = { resolve, reject, parts: sel.includes('+') ? 2 : 1, lastPart: 1, base: 0, lastDl: 0 };
-    job.phase = 'Uruchamianie yt-dlp';
+    job.phase = VG.t('phStartYtdlp');
     job.itemKey = item.key;
     job.tabId = item.tabId;
     native.port.postMessage({
@@ -1113,15 +1116,15 @@ function findItem(tabId, itemId) {
 
 function startJob(tabId, itemId, optionId, audioId, subId) {
   const item = findItem(tabId, itemId);
-  if (!item) throw new Error('Nie znaleziono wideo – odśwież listę');
+  if (!item) throw new Error(VG.t('errNoItem'));
   const option = item.options.find((o) => o.id === optionId);
-  if (!option) throw new Error('Nie znaleziono wybranej wersji');
+  if (!option) throw new Error(VG.t('errNoOption'));
   const job = {
     id: uid('j'),
     title: item.title || VG.fileNameFromUrl(item.url) || 'video',
     label: option.label + (option.hdr && option.hdr.isHdr ? ' · ' + option.hdr.label : ''),
     status: 'running',
-    phase: 'Start',
+    phase: VG.t('phStart'),
     progress: 0,
     bytes: 0,
     speed: 0,
@@ -1140,7 +1143,7 @@ function startJob(tabId, itemId, optionId, audioId, subId) {
     const tr = item.audioTracks.find((t) => t.id === job.choice.audio);
     if (tr && !tr.isDefault) job.label += ' · ' + tr.label;
   }
-  if (job.choice.subTrack) job.label += ' · napisy: ' + job.choice.subTrack.label;
+  if (job.choice.subTrack) job.label += VG.t('jobSubs', { label: job.choice.subTrack.label });
   jobs.set(job.id, job);
   const run =
     item.kind === 'hls' ? runHls : item.kind === 'dash' ? runDash : item.kind === 'youtube' ? runYoutube : runFile;
@@ -1149,12 +1152,12 @@ function startJob(tabId, itemId, optionId, audioId, subId) {
     .then(() => {
       job.status = 'done';
       job.progress = 1;
-      job.phase = 'Gotowe';
+      job.phase = VG.t('phDone');
     })
     .catch((e) => {
       if (job.ctrl.signal.aborted || (e && e.name === 'AbortError')) {
         job.status = 'canceled';
-        job.phase = 'Anulowano';
+        job.phase = VG.t('phCanceled');
       } else {
         job.status = 'error';
         job.error = String((e && e.message) || e);
@@ -1294,7 +1297,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     case 'analyze-entry': {
       const item = findItem(msg.tabId, msg.itemId);
       const entry = item && item.entries && item.entries.find((e) => e.id === msg.entryId);
-      if (!entry) return Promise.resolve({ error: 'Nie znaleziono pozycji' });
+      if (!entry) return Promise.resolve({ error: VG.t('errNoEntry') });
       const referer = item.referer || item.pageUrl;
       return sniffKind(entry.url, referer)
         .then((k) => {
@@ -1308,7 +1311,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           });
           return { ok: true };
         })
-        .catch((e) => ({ error: 'Nie udało się otworzyć: ' + e.message }));
+        .catch((e) => ({ error: VG.t('errOpen', { err: e.message }) }));
     }
     case 'clear-jobs':
       for (const [id, j] of jobs) if (j.status !== 'running') jobs.delete(id);

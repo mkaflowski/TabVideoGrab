@@ -5,7 +5,7 @@
 Dodatek do Firefoksa, który wykrywa wideo w bieżącej karcie, pokazuje dostępne rozdzielczości z oznaczeniem **HDR10 / HLG / Dolby Vision / SDR** i pobiera wybraną wersję razem z wybraną ścieżką dźwiękową i napisami.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="480" alt="Okienko dodatku TabVideoGrab">
+  <img src="docs/screenshot-pl.png" width="510" alt="Okienko dodatku TabVideoGrab">
   <br><sub>Okienko dodatku (przykładowe dane)</sub>
 </p>
 
@@ -38,6 +38,7 @@ Dodatek do Firefoksa, który wykrywa wideo w bieżącej karcie, pokazuje dostęp
   Segmenty trafiają na dysk (OPFS), więc nawet duże filmy nie zapychają pamięci. Gdy obraz i dźwięk zapisują się osobno, dodatek podaje gotową komendę `ffmpeg … -c copy` do ich połączenia.
 - **Listy M3U** (IPTV, radio): dodatek pokazuje pozycje z wyszukiwarką, a przycisk **Analizuj** sprawdza wybraną pozycję (jakości, HDR, pobieranie).
 - **YouTube** przez [yt-dlp](https://github.com/yt-dlp/yt-dlp). Szczegóły w sekcji niżej.
+- **Interfejs po polsku i angielsku**, wybierany automatycznie według języka przeglądarki.
 
 ## Instalacja
 
@@ -61,7 +62,7 @@ Zwykły Firefox instaluje tylko podpisane dodatki. Są dwie możliwości:
   Plik `.xpi` z folderu `web-ext-artifacts` przeciągnij do Firefoksa.
 - **Firefox Developer Edition / Nightly / ESR:** w `about:config` ustaw `xpinstall.signatures.required` na `false`, spakuj dodatek i przeciągnij plik `.xpi` do okna:
   ```powershell
-  Compress-Archive -Path manifest.json,background.js,content.js,lib,popup,icons -DestinationPath TabVideoGrab.zip -Force; Move-Item TabVideoGrab.zip TabVideoGrab.xpi -Force
+  Compress-Archive -Path manifest.json,background.js,content.js,lib,popup,icons,_locales -DestinationPath TabVideoGrab.zip -Force; Move-Item TabVideoGrab.zip TabVideoGrab.xpi -Force
   ```
 
 ## YouTube
@@ -138,6 +139,7 @@ Po przeniesieniu folderu uruchom skrypt ponownie. Odinstalowanie: `.\host\uninst
 | `lib/hdr.js` | klasyfikacja HDR10 / HLG / Dolby Vision / SDR |
 | `lib/youtube.js` | formaty, ścieżki i napisy YouTube; komendy yt-dlp |
 | `lib/sink.js` | zapis segmentów (OPFS lub pamięć) |
+| `lib/i18n.js`, `_locales/` | tłumaczenia (angielski, polski) |
 | `popup/` | okienko dodatku |
 | `host/` | program pomocniczy (Python, native messaging) i skrypty instalacji |
 

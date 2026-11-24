@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "TabVideoGrab"
+  },
+  "extDescription": {
+    "message": "Wykrywa wideo na stronach (MP4, WebM, HLS, DASH, YouTube), pokazuje dostępne rozdzielczości z informacją o HDR i pobiera wybraną wersję z wybraną ścieżką dźwiękową i napisami."
+  }
+}

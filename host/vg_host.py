@@ -165,7 +165,8 @@ def base_args(cmd, url="", cookies=False):
     return args
 
 
-TRAILER_ERR = "YouTube zwrócił zwiastun zamiast filmu – film wymaga dostępu (np. Premium) na koncie zalogowanym w Firefoksie"
+# Błędy z kodem ("code") dodatek tłumaczy na język przeglądarki; "error" to tekst zapasowy po angielsku.
+TRAILER_ERR = "YouTube returned a trailer instead of the film - the film needs access (e.g. Premium) on the account logged in to Firefox"
 
 
 def youtube_id(url):
@@ -217,7 +218,7 @@ INFO_FORMAT_KEYS = [
 def cmd_info(msg):
     yt = find_ytdlp()
     if not yt:
-        send({"type": "info", "id": msg.get("id"), "error": "Nie znaleziono yt-dlp"})
+        send({"type": "info", "id": msg.get("id"), "error": "yt-dlp not found", "code": "no_ytdlp"})
         return
     try:
         cookies = bool(msg.get("cookies")) or always_cookies()
@@ -239,11 +240,11 @@ def cmd_info(msg):
                 if can_retry_with_cookies(msg["url"], TRAILER_ERR, cookies):
                     cookies = True
                     continue
-                send({"type": "info", "id": msg.get("id"), "error": TRAILER_ERR})
+                send({"type": "info", "id": msg.get("id"), "error": TRAILER_ERR, "code": "trailer"})
                 return
             err = r.stderr.decode("utf-8", "replace").strip().splitlines()
             err = [l for l in err if "ERROR" in l] or err
-            msg_err = err[-1] if err else "yt-dlp zakończył się błędem"
+            msg_err = err[-1] if err else "yt-dlp failed"
             if can_retry_with_cookies(msg["url"], msg_err, cookies):
                 cookies = True
                 continue
@@ -287,7 +288,7 @@ def cmd_download(msg):
     job = msg["id"]
     yt = find_ytdlp()
     if not yt:
-        send({"type": "error", "id": job, "error": "Nie znaleziono yt-dlp – zainstaluj go (winget install yt-dlp)"})
+        send({"type": "error", "id": job, "error": "yt-dlp not found", "code": "no_ytdlp"})
         return
     out_dir = msg.get("outDir") or downloads_dir()
     cookies = bool(msg.get("cookies")) or always_cookies()
@@ -304,7 +305,7 @@ def cmd_download(msg):
     if code == 0:
         send({"type": "done", "id": job, "files": files})
     else:
-        send({"type": "error", "id": job, "error": error or "yt-dlp: kod %d" % code})
+        send({"type": "error", "id": job, "error": error or "yt-dlp: exit code %d" % code, "code": "trailer" if error == TRAILER_ERR else None})
 
 
 def _run_download(job, yt, msg, out_dir, cookies):
@@ -411,7 +412,7 @@ def main():
             break
         h = HANDLERS.get(msg.get("cmd"))
         if not h:
-            send({"type": "error", "id": msg.get("id"), "error": "Nieznane polecenie"})
+            send({"type": "error", "id": msg.get("id"), "error": "Unknown command"})
             continue
         if msg.get("cmd") in ("info", "download"):
             threading.Thread(target=h, args=(msg,), daemon=True).start()

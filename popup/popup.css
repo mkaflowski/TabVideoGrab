@@ -14,7 +14,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  width: 480px;
+  width: 510px;
   max-height: 600px;
   background: var(--bg);
   color: var(--text);

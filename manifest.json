@@ -1,8 +1,9 @@
 {
   "manifest_version": 2,
-  "name": "TabVideoGrab",
+  "name": "__MSG_extName__",
+  "default_locale": "en",
   "version": "1.1.0",
-  "description": "Wykrywa wideo na stronach (MP4, WebM, HLS, DASH), pokazuje dostępne rozdzielczości i informację o HDR oraz pobiera wybraną wersję.",
+  "description": "__MSG_extDescription__",
   "icons": {
     "48": "icons/icon.svg",
     "96": "icons/icon.svg"
@@ -20,6 +21,7 @@
   "background": {
     "scripts": [
       "lib/util.js",
+      "lib/i18n.js",
       "lib/hdr.js",
       "lib/hls.js",
       "lib/dash.js",
@@ -40,7 +42,7 @@
   ],
   "browser_action": {
     "default_icon": "icons/icon.svg",
-    "default_title": "TabVideoGrab",
+    "default_title": "__MSG_extName__",
     "default_popup": "popup/popup.html"
   },
   "browser_specific_settings": {

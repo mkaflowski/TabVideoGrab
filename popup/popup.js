@@ -43,9 +43,9 @@ function hdrBadge(h) {
 
 function optionRow(item, o) {
   const l1 = [];
-  if (o.audioOnly) l1.push('Tylko dźwięk');
-  else if (o.width && o.height) l1.push(`${o.width}×${o.height}${o.fromPlayer ? ' (z odtwarzacza)' : ''}`);
-  else l1.push('Rozdzielczość nieznana');
+  if (o.audioOnly) l1.push(VG.t('audioOnly'));
+  else if (o.width && o.height) l1.push(`${o.width}×${o.height}${o.fromPlayer ? VG.t('fromPlayer') : ''}`);
+  else l1.push(VG.t('unknownRes'));
   if (o.fps) l1.push(`${Math.round(o.fps * 100) / 100} fps`);
   const l2 = [];
   const codec = VG.codecName(o.codecs);
@@ -58,23 +58,23 @@ function optionRow(item, o) {
   if (o.auto) {
     l1.length = 0;
     l2.length = 0;
-    l1.push('Najwyższa dostępna jakość + najlepszy dźwięk');
-    l2.push('wybór należy do yt-dlp');
+    l1.push(VG.t('bestLine1'));
+    l2.push(VG.t('bestLine2'));
   }
-  const q = o.audioOnly ? 'Audio' : o.auto ? 'Najlepsza' : esc(o.label).replace(/\s*\((.*)\)/, '<small>$1</small>');
+  const q = o.audioOnly ? 'Audio' : o.auto ? esc(VG.t('best')) : esc(o.label).replace(/\s*\((.*)\)/, '<small>$1</small>');
   const yt = item.kind === 'youtube';
   const disabled = o.drm || item.status !== 'ready' || (yt && !nativeOk());
   const title = o.drm
-    ? 'Zabezpieczone DRM'
+    ? VG.t('drmProtected')
     : yt && !nativeOk()
-    ? 'Wymaga programu pomocniczego z yt-dlp – zainstaluj go albo skopiuj komendę obok'
-    : 'Pobierz tę wersję';
-  const copy = yt ? `<button class="ghost icon" data-ytcmd="${item.id}|${o.id}" title="Kopiuj komendę yt-dlp (z wybranym dźwiękiem i napisami)">⧉</button>` : '';
+    ? VG.t('needsHelper')
+    : VG.t('dlThis');
+  const copy = yt ? `<button class="ghost icon" data-ytcmd="${item.id}|${o.id}" title="${esc(VG.t('copyYtCmd'))}">⧉</button>` : '';
   return `<div class="opt">
     <div class="q">${q}</div>
     <div class="det"><div class="l1">${esc(l1.join(' · '))}</div><div>${esc(l2.join(' · '))}</div></div>
     ${o.audioOnly ? '' : o.auto ? '' : hdrBadge(o.hdr)}
-    ${copy}<button data-dl="${item.id}|${o.id}" ${disabled ? 'disabled' : ''} title="${title}">${o.drm ? 'DRM' : 'Pobierz'}</button>
+    ${copy}<button data-dl="${item.id}|${o.id}" ${disabled ? 'disabled' : ''} title="${title}">${o.drm ? 'DRM' : esc(VG.t('download'))}</button>
   </div>`;
 }
 
@@ -86,16 +86,16 @@ function tracksRow(item) {
     const opts = item.audioTracks
       .map((t) => {
         const sel = c.audio ? c.audio === t.id : def ? def.id === t.id : false;
-        return `<option value="${esc(t.id)}"${sel ? ' selected' : ''}>${esc(t.label)}${t.isDefault ? ' – domyślna' : ''}</option>`;
+        return `<option value="${esc(t.id)}"${sel ? ' selected' : ''}>${esc(t.label)}${t.isDefault ? esc(VG.t('defaultTrack')) : ''}</option>`;
       })
       .join('');
-    parts.push(`<label>Dźwięk<select data-audio="${item.id}" data-url="${esc(item.url)}">${opts}</select></label>`);
+    parts.push(`<label>${esc(VG.t('audioLabel'))}<select data-audio="${item.id}" data-url="${esc(item.url)}">${opts}</select></label>`);
   }
   if (item.subTracks.length) {
     const opts =
-      `<option value="">Bez napisów</option>` +
+      `<option value="">${esc(VG.t('noSubs'))}</option>` +
       item.subTracks.map((t) => `<option value="${esc(t.id)}"${c.sub === t.id ? ' selected' : ''}>${esc(t.label)}</option>`).join('');
-    parts.push(`<label>Napisy<select data-sub="${item.id}" data-url="${esc(item.url)}">${opts}</select></label>`);
+    parts.push(`<label>${esc(VG.t('subsLabel'))}<select data-sub="${item.id}" data-url="${esc(item.url)}">${opts}</select></label>`);
   }
   return parts.length ? `<div class="tracks">${parts.join('')}</div>` : '';
 }
@@ -112,13 +112,13 @@ function entriesList(item) {
     .map(
       (e) => `<div class="opt entry">
       <div class="det"><div class="l1">${esc(e.name || VG.fileNameFromUrl(e.url) || e.url)}</div><div>${esc(e.group ? e.group + ' · ' : '')}${esc(e.url)}</div></div>
-      <button class="ghost icon" data-copy="${esc(e.url)}" title="Kopiuj adres">⧉</button>
-      <button data-analyze="${item.id}|${e.id}" ${e.added ? 'disabled' : ''} title="Sprawdź jakości i HDR tej pozycji">${e.added ? 'Dodano ↑' : 'Analizuj'}</button>
+      <button class="ghost icon" data-copy="${esc(e.url)}" title="${esc(VG.t('copyAddress'))}">⧉</button>
+      <button data-analyze="${item.id}|${e.id}" ${e.added ? 'disabled' : ''} title="${esc(VG.t('analyzeTitle'))}">${esc(e.added ? VG.t('added') : VG.t('analyze'))}</button>
     </div>`
     )
     .join('');
-  const search = all.length > 8 ? `<div class="tracks"><input class="filter" data-filter="${item.id}" placeholder="Szukaj na liście (${all.length})…" value="${esc(entryFilter[item.id] || '')}"></div>` : '';
-  const more = shown.length > MAX_ENTRIES ? `<div class="notes"><div class="note">…i ${shown.length - MAX_ENTRIES} więcej – zawęź wyszukiwanie.</div></div>` : '';
+  const search = all.length > 8 ? `<div class="tracks"><input class="filter" data-filter="${item.id}" placeholder="${esc(VG.t('searchList', { n: all.length }))}" value="${esc(entryFilter[item.id] || '')}"></div>` : '';
+  const more = shown.length > MAX_ENTRIES ? `<div class="notes"><div class="note">${esc(VG.t('moreEntries', { n: shown.length - MAX_ENTRIES }))}</div></div>` : '';
   return search + `<div class="opts">${rows}</div>` + more;
 }
 
@@ -132,24 +132,24 @@ function itemCard(item) {
       ? 'YOUTUBE'
       : item.kind === 'm3u'
       ? 'M3U'
-      : (item.container || 'PLIK').toUpperCase();
+      : (item.container || VG.t('kindFile')).toUpperCase();
   const meta = [];
   if (item.duration) meta.push(VG.formatDuration(item.duration));
-  if (item.live) meta.push('NA ŻYWO');
+  if (item.live) meta.push(VG.t('live'));
   const vids = item.options.filter((o) => !o.audioOnly);
-  if (vids.length > 1) meta.push(`${vids.length} wersji`);
+  if (vids.length > 1) meta.push(VG.t('versions', { n: vids.length }));
   if (item.kind === 'youtube') {
-    if (item.loadingMore) meta.push('<span class="spin"></span> yt-dlp sprawdza formaty…');
-    else if (item.source === 'ytdlp') meta.push('formaty: yt-dlp');
-    else if (item.source === 'page') meta.push('formaty: strona');
+    if (item.loadingMore) meta.push('<span class="spin"></span> ' + esc(VG.t('ytChecking')));
+    else if (item.source === 'ytdlp') meta.push(VG.t('fmtYtdlp'));
+    else if (item.source === 'page') meta.push(VG.t('fmtPage'));
   }
-  if (vids.some((o) => o.hdr && o.hdr.isHdr)) meta.push('<span class="hdr-yes">HDR dostępne</span>');
-  else if (vids.length && vids.every((o) => o.hdr && o.hdr.isHdr === false)) meta.push('tylko SDR');
+  if (vids.some((o) => o.hdr && o.hdr.isHdr)) meta.push('<span class="hdr-yes">' + esc(VG.t('hdrAvailable')) + '</span>');
+  else if (vids.length && vids.every((o) => o.hdr && o.hdr.isHdr === false)) meta.push(VG.t('sdrOnly'));
   const metaHtml = meta.map((m) => (m.startsWith('<') ? m : esc(m))).join(' · ');
 
   let body = '';
-  if (item.status === 'parsing') body = `<div class="notes"><span class="spin"></span> Analizowanie…</div>`;
-  else if (item.status === 'error') body = `<div class="notes"><div class="note err">Błąd: ${esc(item.error)}</div></div>`;
+  if (item.status === 'parsing') body = `<div class="notes"><span class="spin"></span> ${esc(VG.t('analyzing'))}</div>`;
+  else if (item.status === 'error') body = `<div class="notes"><div class="note err">${esc(VG.t('error', { e: item.error }))}</div></div>`;
   else {
     const list = (item.notes || []).slice();
     if (item.moreError) list.push('yt-dlp: ' + item.moreError);
@@ -161,7 +161,7 @@ function itemCard(item) {
     <div class="item-head">
       <div class="item-top"><span class="kind ${item.kind}">${esc(kindLabel)}</span>
         <div class="item-title" title="${esc(item.url)}">${esc(item.title || VG.fileNameFromUrl(item.url) || item.url)}</div></div>
-      <div class="item-meta">${metaHtml}${metaHtml ? ' · ' : ''}<button class="link" data-copy="${esc(item.url)}">kopiuj URL</button></div>
+      <div class="item-meta">${metaHtml}${metaHtml ? ' · ' : ''}<button class="link" data-copy="${esc(item.url)}">${esc(VG.t('copyUrl'))}</button></div>
     </div>${body}</div>`;
 }
 
@@ -170,17 +170,17 @@ function jobCard(j) {
   let sub = '';
   if (j.status === 'running') {
     sub = `${esc(j.phase)} · ${pct}%` + (j.bytes ? ` · ${VG.formatBytes(j.bytes)}` : '') + (j.speed ? ` · ${VG.formatBytes(j.speed)}/s` : '');
-  } else if (j.status === 'done') sub = `<span class="ok">Zapisano:</span> ${esc(j.files.join(', '))}`;
-  else if (j.status === 'error') sub = `<span class="err">Błąd: ${esc(j.error)}</span>`;
-  else sub = 'Anulowano';
+  } else if (j.status === 'done') sub = `<span class="ok">${esc(VG.t('saved'))}</span> ${esc(j.files.join(', '))}`;
+  else if (j.status === 'error') sub = `<span class="err">${esc(VG.t('error', { e: j.error }))}</span>`;
+  else sub = esc(VG.t('canceled'));
   const cmd =
     j.status === 'done' && j.note
-      ? `<div class="cmd"><code title="${esc(j.note)}">${esc(j.note)}</code><button class="ghost" data-copy="${esc(j.note)}">Kopiuj</button></div>`
+      ? `<div class="cmd"><code title="${esc(j.note)}">${esc(j.note)}</code><button class="ghost" data-copy="${esc(j.note)}">${esc(VG.t('copy'))}</button></div>`
       : '';
-  const reveal = j.status === 'done' && j.canReveal ? `<div class="cmd"><button class="link" data-reveal="${j.id}">Pokaż w folderze</button></div>` : '';
+  const reveal = j.status === 'done' && j.canReveal ? `<div class="cmd"><button class="link" data-reveal="${j.id}">${esc(VG.t('showInFolder'))}</button></div>` : '';
   return `<div class="job ${j.status}">
     <div class="job-top"><div class="job-title" title="${esc(j.title)}">${esc(j.title)} <span style="color:var(--muted)">· ${esc(j.label)}</span></div>
-    ${j.status === 'running' ? `<button class="ghost" data-cancel="${j.id}">Anuluj</button>` : ''}</div>
+    ${j.status === 'running' ? `<button class="ghost" data-cancel="${j.id}">${esc(VG.t('cancel'))}</button>` : ''}</div>
     <div class="bar"><i style="width:${j.status === 'running' ? pct : 100}%"></i></div>
     <div class="job-sub">${sub}</div>${cmd}${reveal}</div>`;
 }
@@ -194,8 +194,8 @@ async function refresh() {
     return;
   }
   const jobsHtml = state.jobs.length
-    ? `<div class="jobs-head"><span>Pobierania</span>${
-        state.jobs.some((j) => j.status !== 'running') ? '<button class="link" data-clearjobs>wyczyść zakończone</button>' : ''
+    ? `<div class="jobs-head"><span>${esc(VG.t('downloads'))}</span>${
+        state.jobs.some((j) => j.status !== 'running') ? `<button class="link" data-clearjobs>${esc(VG.t('clearFinished'))}</button>` : ''
       }</div>` + state.jobs.map(jobCard).join('')
     : '';
   if (jobsHtml !== lastJobsHtml) {
@@ -208,17 +208,17 @@ async function refresh() {
   if (hasYt && !nativeOk()) {
     const why =
       nativeState.state === 'ok'
-        ? 'Program pomocniczy działa, ale nie znalazł <b>yt-dlp</b>. Zainstaluj: <code>winget install yt-dlp.yt-dlp</code> i uruchom ponownie Firefoksa.'
+        ? VG.t('bannerNoYtdlp')
         : nativeState.state === 'connecting' || nativeState.state === 'unknown'
-        ? 'Łączenie z programem pomocniczym…'
-        : 'Aby pobierać z YouTube jednym kliknięciem, zainstaluj program pomocniczy (raz) – uruchom poniższą komendę w folderze dodatku. Do tego czasu możesz skopiować komendę yt-dlp przyciskiem ⧉.';
-    const btn = nativeState.state === 'missing' ? `<div class="cmd"><code>${esc(INSTALL_CMD)}</code><button class="ghost" data-copy="${esc(INSTALL_CMD)}">Kopiuj</button></div>` : '';
+        ? esc(VG.t('bannerConnecting'))
+        : esc(VG.t('bannerMissing'));
+    const btn = nativeState.state === 'missing' ? `<div class="cmd"><code>${esc(INSTALL_CMD)}</code><button class="ghost" data-copy="${esc(INSTALL_CMD)}">${esc(VG.t('copy'))}</button></div>` : '';
     banner = `<div class="banner">${why}${btn}</div>`;
   }
   const listHtml = state.items.length
     ? banner + state.items.map(itemCard).join('') +
-      '<div class="foot">Najedź na znaczek HDR, aby zobaczyć szczegóły. Treści z DRM (Netflix, Disney+ itp.) nie da się pobrać.</div>'
-    : `<div class="empty"><b>Nie wykryto wideo</b>Uruchom odtwarzanie filmu na stronie – pojawi się tutaj.<br>Jeśli strona była otwarta przed instalacją dodatku, odśwież ją.</div>`;
+      `<div class="foot">${esc(VG.t('footer'))}</div>`
+    : `<div class="empty"><b>${esc(VG.t('emptyTitle'))}</b>${VG.t('emptyText')}</div>`;
   if (listHtml !== lastListHtml) {
     $list.innerHTML = listHtml;
     lastListHtml = listHtml;
@@ -274,7 +274,7 @@ document.addEventListener('click', async (e) => {
       b.textContent = '✓';
       setTimeout(() => (b.textContent = '⧉'), 1200);
     } catch (err) {
-      prompt('Skopiuj komendę:', cmd);
+      prompt(VG.t('copyCmdPrompt'), cmd);
     }
     return;
   } else if (b.dataset.analyze) {
@@ -289,7 +289,7 @@ document.addEventListener('click', async (e) => {
     try {
       await navigator.clipboard.writeText(b.dataset.copy);
       const t = b.textContent;
-      b.textContent = 'skopiowano ✓';
+      b.textContent = VG.t('copied');
       setTimeout(() => (b.textContent = t), 1200);
     } catch (err) {}
     return;
@@ -303,6 +303,12 @@ document.addEventListener('click', async (e) => {
   lastJobsHtml = lastListHtml = '';
   refresh();
 });
+
+// teksty z popup.html
+const $clear = document.getElementById('clear');
+$clear.textContent = VG.t('clear');
+$clear.title = VG.t('clearTitle');
+document.documentElement.lang = VG.lang;
 
 (async () => {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
