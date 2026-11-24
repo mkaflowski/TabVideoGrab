@@ -1,144 +1,147 @@
 # TabVideoGrab
 
-Dodatek do Firefoksa, który wykrywa wideo w bieżącej karcie, pokazuje dostępne rozdzielczości z oznaczeniem **HDR10 / HLG / Dolby Vision / SDR** i pobiera wybraną wersję razem z wybraną ścieżką dźwiękową i napisami.
+**English** | [Polski](README.pl.md)
+
+A Firefox add-on that detects video in the current tab, lists the available resolutions with an **HDR10 / HLG / Dolby Vision / SDR** badge, and downloads the version you pick, together with the audio track and subtitles you choose.
 
 <p align="center">
-  <img src="docs/screenshot.png" width="480" alt="Okienko dodatku TabVideoGrab">
-  <br><sub>Okienko dodatku (przykładowe dane)</sub>
+  <img src="docs/screenshot.png" width="480" alt="TabVideoGrab popup">
+  <br><sub>The add-on popup (sample data; the interface is currently in Polish)</sub>
 </p>
 
-## Możliwości
+## Features
 
-- **Wykrywanie wideo** na podstawie ruchu sieciowego karty:
-  - playlisty HLS (`.m3u8`, `.m3u`),
-  - manifesty DASH (`.mpd`),
-  - pliki MP4/WebM/MOV/MKV,
-  - elementy `<video>` na stronie.
+- **Video detection** from the tab's network traffic:
+  - HLS playlists (`.m3u8`, `.m3u`),
+  - DASH manifests (`.mpd`),
+  - MP4/WebM/MOV/MKV files,
+  - `<video>` elements on the page.
 
-  Liczba wykrytych filmów pojawia się na ikonie dodatku.
-- **Lista wersji** z rozdzielczością, fps, kodekiem, bitrate i rozmiarem (dokładnym albo szacowanym).
-- **Rozpoznawanie HDR** przy każdej wersji. Po najechaniu na znaczek widać, skąd wzięła się ocena.
+  The number of detected videos is shown on the toolbar icon.
+- **Version list** with resolution, frame rate, codec, bitrate and size (exact or estimated).
+- **HDR detection** for every version. Hover over the badge to see what the verdict is based on.
 
-  | Znaczek | Na jakiej podstawie |
+  | Badge | Based on |
   |---|---|
-  | `HDR10` | `VIDEO-RANGE=PQ`, CICP transfer 16, pudełko `colr`, ciąg kodeka AV1/VP9, SEI mastering display (HEVC) |
+  | `HDR10` | `VIDEO-RANGE=PQ`, CICP transfer 16, `colr` box, AV1/VP9 codec string, mastering-display SEI (HEVC) |
   | `HLG` | `VIDEO-RANGE=HLG`, CICP transfer 18 |
-  | `Dolby Vision` | kodeki `dvh1`/`dvhe`/`dav1`, `SUPPLEMENTAL-CODECS`, pudełko `dvcC` |
-  | `SDR` | jawnie SDR albo materiał 8-bitowy |
-  | `10-bit` / `BT.2020` | 10-bit lub paleta BT.2020 bez informacji o krzywej – może być HDR |
+  | `Dolby Vision` | `dvh1`/`dvhe`/`dav1` codecs, `SUPPLEMENTAL-CODECS`, `dvcC` box |
+  | `SDR` | explicitly SDR, or 8-bit content |
+  | `10-bit` / `BT.2020` | 10-bit or BT.2020 colour without transfer info – may be HDR |
 
-- **Wybór ścieżki dźwiękowej i napisów** z list rozwijanych, gdy film ma ich kilka.
-- **Pobieranie:**
-  - zwykłe pliki przez menedżer pobierania Firefoksa;
-  - HLS: segmenty pobierane równolegle, odszyfrowanie AES-128, sklejanie w `.ts` lub `.mp4` (fMP4);
+- **Audio track and subtitle selection** from drop-down lists when a video has more than one.
+- **Downloading:**
+  - plain files go through Firefox's download manager;
+  - HLS: segments are fetched in parallel, AES-128 is decrypted, and the result is joined into `.ts` or `.mp4` (fMP4);
   - DASH: `SegmentTemplate` (`$Number$`, `$Time$`/`SegmentTimeline`), `SegmentList`, `SegmentBase`.
 
-  Segmenty trafiają na dysk (OPFS), więc nawet duże filmy nie zapychają pamięci. Gdy obraz i dźwięk zapisują się osobno, dodatek podaje gotową komendę `ffmpeg … -c copy` do ich połączenia.
-- **Listy M3U** (IPTV, radio): dodatek pokazuje pozycje z wyszukiwarką, a przycisk **Analizuj** sprawdza wybraną pozycję (jakości, HDR, pobieranie).
-- **YouTube** przez [yt-dlp](https://github.com/yt-dlp/yt-dlp). Szczegóły w sekcji niżej.
+  Segments are written to disk (OPFS), so large videos don't fill up memory. When video and audio are saved as separate files, the add-on gives you a ready `ffmpeg … -c copy` command to merge them.
+- **M3U lists** (IPTV, radio): the add-on lists the entries with a search box, and the **Analyze** button inspects the selected entry (versions, HDR, download).
+- **YouTube** via [yt-dlp](https://github.com/yt-dlp/yt-dlp) – see below.
 
-## Instalacja
+## Installation
 
-### Tymczasowo (najszybciej)
+### Temporary (quickest)
 
-1. Pobierz repozytorium (`git clone` albo **Code → Download ZIP**).
-2. W Firefoksie otwórz `about:debugging#/runtime/this-firefox`.
-3. Kliknij **Załaduj tymczasowy dodatek…** i wskaż `manifest.json`.
-4. Odśwież stronę z filmem i włącz odtwarzanie.
+1. Get the repository (`git clone` or **Code → Download ZIP**).
+2. In Firefox, open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on…** and select `manifest.json`.
+4. Reload the page with the video and start playback.
 
-Tak wczytany dodatek znika po zamknięciu Firefoksa.
+An add-on loaded this way is removed when Firefox closes.
 
-### Na stałe
+### Permanent
 
-Zwykły Firefox instaluje tylko podpisane dodatki. Są dwie możliwości:
+Release Firefox only installs signed add-ons. You have two options:
 
-- **Podpis z AMO bez publikacji:** wygeneruj klucze API w addons.mozilla.org → Developer Hub → *Manage API Keys*, a potem:
+- **Sign it on AMO without publishing:** create API keys at addons.mozilla.org → Developer Hub → *Manage API Keys*, then run:
   ```powershell
-  npx web-ext sign --channel=unlisted --api-key=KLUCZ --api-secret=SEKRET
+  npx web-ext sign --channel=unlisted --api-key=KEY --api-secret=SECRET
   ```
-  Plik `.xpi` z folderu `web-ext-artifacts` przeciągnij do Firefoksa.
-- **Firefox Developer Edition / Nightly / ESR:** w `about:config` ustaw `xpinstall.signatures.required` na `false`, spakuj dodatek i przeciągnij plik `.xpi` do okna:
+  Drag the `.xpi` from the `web-ext-artifacts` folder into Firefox.
+- **Firefox Developer Edition / Nightly / ESR:** set `xpinstall.signatures.required` to `false` in `about:config`, pack the add-on and drag the `.xpi` into the window:
   ```powershell
   Compress-Archive -Path manifest.json,background.js,content.js,lib,popup,icons -DestinationPath TabVideoGrab.zip -Force; Move-Item TabVideoGrab.zip TabVideoGrab.xpi -Force
   ```
 
 ## YouTube
 
-YouTube nie korzysta ze standardowych strumieni, więc działa trochę inaczej:
+YouTube doesn't use standard streams, so it works a little differently:
 
-- **Lista formatów:** najpierw z danych odtwarzacza na stronie, a gdy działa program pomocniczy, z `yt-dlp -J`, który podaje HDR wprost.
-- **Przycisk ⧉** kopiuje gotową komendę yt-dlp z wybraną jakością, dźwiękiem i napisami. Działa bez programu pomocniczego.
-- **Przycisk Pobierz** uruchamia yt-dlp w tle (wymaga programu pomocniczego). yt-dlp łączy obraz z dźwiękiem i zapisuje plik w folderze *Pobrane*.
-- **Zwiastun zamiast filmu.** Gdy film jest dostępny tylko dla Premium, a YouTube podsuwa zamiast niego zwiastun, dodatek to rozpoznaje i nie pokazuje ani nie pobiera zwiastuna jako filmu.
+- **Format list:** first from the player data on the page, then – when the helper is installed – from `yt-dlp -J`, which reports HDR directly.
+- **The ⧉ button** copies a ready yt-dlp command with the chosen quality, audio track and subtitles. It works without the helper.
+- **The Download button** runs yt-dlp in the background (requires the helper). yt-dlp merges video and audio and saves the file to your *Downloads* folder.
+- **Trailer instead of the film.** When a video is Premium-only and YouTube serves its trailer instead, the add-on detects it and won't list or download the trailer as the film.
 
-### Program pomocniczy (Windows, jednorazowo)
+### Native helper (Windows, one-time setup)
 
-Wymagania: Python 3, [yt-dlp](https://github.com/yt-dlp/yt-dlp), [ffmpeg](https://ffmpeg.org/), a najlepiej też [Node.js](https://nodejs.org/) lub [deno](https://deno.com/) (yt-dlp potrzebuje środowiska JavaScript do obsługi YouTube).
+Requirements: Python 3, [yt-dlp](https://github.com/yt-dlp/yt-dlp), [ffmpeg](https://ffmpeg.org/), and ideally [Node.js](https://nodejs.org/) or [deno](https://deno.com/) (yt-dlp needs a JavaScript runtime for YouTube).
 
-W folderze dodatku uruchom:
+In the add-on folder, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\host\install.ps1
 ```
 
-Skrypt:
-- tworzy `host\vg_host.bat` i `host\tabvideograb.json`,
-- dodaje wpis `HKCU\Software\Mozilla\NativeMessagingHosts\tabvideograb` (tylko dla bieżącego użytkownika),
-- proponuje instalację yt-dlp przez winget, jeśli go nie znajdzie.
+The script:
+- creates `host\vg_host.bat` and `host\tabvideograb.json`,
+- adds the registry key `HKCU\Software\Mozilla\NativeMessagingHosts\tabvideograb` (current user only),
+- offers to install yt-dlp with winget if it can't find it.
 
-Po przeniesieniu folderu uruchom skrypt ponownie. Odinstalowanie: `.\host\uninstall.ps1`.
+Run it again after moving the folder. To uninstall: `.\host\uninstall.ps1`.
 
-### Ustawienia (`host\config.json`, opcjonalnie)
+### Settings (`host\config.json`, optional)
 
 ```json
 {
-  "ytdlp": "C:\\narzedzia\\yt-dlp.exe",
+  "ytdlp": "C:\\tools\\yt-dlp.exe",
   "ffmpeg": "C:\\ffmpeg\\bin\\ffmpeg.exe",
-  "outDir": "D:\\Filmy",
+  "outDir": "D:\\Videos",
   "jsRuntime": "node:C:\\Program Files\\nodejs\\node.exe",
   "cookiesFromBrowser": "firefox",
   "cookiesMode": "fallback"
 }
 ```
 
-| Klucz | Znaczenie |
+| Key | Meaning |
 |---|---|
-| `ytdlp`, `ffmpeg` | ścieżki, jeśli programy nie są w PATH |
-| `outDir` | folder zapisu (domyślnie *Pobrane*) |
-| `jsRuntime` | środowisko JS dla yt-dlp. Domyślnie wykrywane: Node.js lub Bun, a deno yt-dlp znajduje sam |
-| `cookiesFromBrowser` | skąd brać sesję YouTube: `firefox`, `firefox:NAZWA_PROFILU` albo `""` (bez logowania) |
-| `cookiesMode` | `fallback` (domyślnie): logowanie tylko, gdy film go wymaga (Premium, wiek, film prywatny, zwiastun zamiast filmu). `always`: zawsze z sesją, dzięki czemu widać też format **1080p Premium** |
+| `ytdlp`, `ffmpeg` | paths, if the programs aren't on PATH |
+| `outDir` | output folder (default: *Downloads*) |
+| `jsRuntime` | JS runtime for yt-dlp. Detected automatically: Node.js or Bun; yt-dlp finds deno on its own |
+| `cookiesFromBrowser` | where to take the YouTube session from: `firefox`, `firefox:PROFILE_NAME`, or `""` (never log in) |
+| `cookiesMode` | `fallback` (default): log in only when a video needs it (Premium, age-restricted, private, trailer served instead of the film). `always`: always use the session, which also shows the **1080p Premium** format |
 
-## Ścieżki dźwiękowe i napisy
+## Audio tracks and subtitles
 
-| Źródło | Dźwięk | Napisy |
+| Source | Audio | Subtitles |
 |---|---|---|
-| YouTube | ścieżki z dubbingiem | ręczne i automatyczne; zapisywane jako `.srt` obok filmu |
-| HLS | `EXT-X-MEDIA TYPE=AUDIO` | `TYPE=SUBTITLES`; segmenty WebVTT sklejane w jeden plik `.vtt` |
-| DASH | zestawy audio według języka, etykiety i roli | WebVTT/TTML (całe pliki lub segmentowane `text/vtt`) |
+| YouTube | dubbed audio tracks | manual and automatic; saved as `.srt` next to the video |
+| HLS | `EXT-X-MEDIA TYPE=AUDIO` | `TYPE=SUBTITLES`; WebVTT segments joined into one `.vtt` file |
+| DASH | audio sets by language, label and role | WebVTT/TTML (whole files or segmented `text/vtt`) |
 
-## Ograniczenia
+## Limitations
 
-- **DRM:** treści zabezpieczone Widevine, PlayReady lub FairPlay (Netflix, Disney+, Prime, filmy kupione na YouTube) są oznaczane jako „DRM” i nie są pobierane. Dodatek nie obchodzi zabezpieczeń.
-- **DASH z kilkoma okresami** (np. z reklamami): pobierany jest tylko pierwszy okres.
-- **Transmisje na żywo:** z HLS pobierany jest fragment dostępny w danej chwili. Strumienie bez końca (radio) pobierają się, dopóki ich nie anulujesz.
-- **Łączenie obrazu z dźwiękiem:** dla HLS/DASH dodatek tego nie robi, tylko podaje komendę ffmpeg. Na YouTube robi to yt-dlp.
-- **Program pomocniczy** ma na razie skrypt instalacyjny tylko dla Windows.
+- **DRM:** content protected with Widevine, PlayReady or FairPlay (Netflix, Disney+, Prime, films bought on YouTube) is marked "DRM" and not downloaded. The add-on does not circumvent protection.
+- **Multi-period DASH** (e.g. with ads): only the first period is downloaded.
+- **Live streams:** for HLS, only the part available at that moment is downloaded. Endless streams (radio) keep downloading until you cancel.
+- **Merging video and audio:** for HLS/DASH the add-on doesn't merge them; it gives you the ffmpeg command. On YouTube, yt-dlp does it.
+- **Native helper:** the install script is Windows-only for now.
+- **Interface language:** the popup is currently in Polish.
 
-## Budowa
+## Project structure
 
-| Plik | Rola |
+| File | Purpose |
 |---|---|
-| `background.js` | wykrywanie (webRequest), analiza, kolejka pobierania, nagłówek Referer dla CDN |
-| `content.js` | elementy `<video>` na stronie, dane odtwarzacza YouTube |
-| `lib/hls.js`, `lib/dash.js` | parsery m3u8/m3u i mpd |
-| `lib/probe.js` | odczyt nagłówków MP4/WebM (`colr`, `hvcC`, `av1C`, `vpcC`, `dvcC`, SEI) |
-| `lib/hdr.js` | klasyfikacja HDR10 / HLG / Dolby Vision / SDR |
-| `lib/youtube.js` | formaty, ścieżki i napisy YouTube; komendy yt-dlp |
-| `lib/sink.js` | zapis segmentów (OPFS lub pamięć) |
-| `popup/` | okienko dodatku |
-| `host/` | program pomocniczy (Python, native messaging) i skrypty instalacji |
+| `background.js` | detection (webRequest), analysis, download queue, Referer header for CDNs |
+| `content.js` | `<video>` elements on the page, YouTube player data |
+| `lib/hls.js`, `lib/dash.js` | m3u8/m3u and mpd parsers |
+| `lib/probe.js` | MP4/WebM header parsing (`colr`, `hvcC`, `av1C`, `vpcC`, `dvcC`, SEI) |
+| `lib/hdr.js` | HDR10 / HLG / Dolby Vision / SDR classification |
+| `lib/youtube.js` | YouTube formats, audio tracks and subtitles; yt-dlp commands |
+| `lib/sink.js` | segment storage (OPFS or memory) |
+| `popup/` | the add-on popup |
+| `host/` | native helper (Python, native messaging) and install scripts |
 
-## Zastrzeżenie
+## Disclaimer
 
-Projekt służy do zapisywania materiałów, do których masz prawo: własnych, udostępnionych na wolnych licencjach albo takich, na których pobranie pozwala regulamin serwisu. Za sposób użycia odpowiada użytkownik. Regulamin YouTube ogranicza pobieranie poza funkcjami udostępnionymi przez serwis.
+This project is meant for saving content you have the right to save: your own, freely licensed, or allowed by the service's terms. You are responsible for how you use it. YouTube's Terms of Service restrict downloading outside the features YouTube provides.
