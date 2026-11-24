@@ -1,0 +1,13 @@
+# pliki tworzone przez host/install.ps1 (zawierają lokalne ścieżki)
+host/vg_host.bat
+host/tabvideograb.json
+host/video_grabber.json
+host/config.json
+host/yt-dlp.exe
+
+__pycache__/
+*.pyc
+*.xpi
+*.zip
+web-ext-artifacts/
+.claude/
